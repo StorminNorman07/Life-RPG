@@ -30,6 +30,10 @@ import {
   GameProvider,
 } from "@/context/GameContext";
 
+import {
+  PremiumProvider,
+} from "@/context/PremiumContext";
+
 
 export const metadata:
   Metadata = {
@@ -37,7 +41,7 @@ export const metadata:
     "Life RPG",
 
   description:
-    "Build your character by building your life.",
+    "Build better habits, grow your stats, and bring your progress to life.",
 
   applicationName:
     "Life RPG",
@@ -130,21 +134,23 @@ export default function RootLayout({
               children
             }
           >
-            <GameProvider>
-              <AchievementProvider>
-                <CharacterProvider>
-                  <FocusTimerProvider>
-                    <FocusAudioProvider>
-                      <ProfileSync />
+            <PremiumProvider>
+              <GameProvider>
+                <AchievementProvider>
+                  <CharacterProvider>
+                    <FocusTimerProvider>
+                      <FocusAudioProvider>
+                        <ProfileSync />
 
-                      <Navigation />
+                        <Navigation />
 
-                      {children}
-                    </FocusAudioProvider>
-                  </FocusTimerProvider>
-                </CharacterProvider>
-              </AchievementProvider>
-            </GameProvider>
+                        {children}
+                      </FocusAudioProvider>
+                    </FocusTimerProvider>
+                  </CharacterProvider>
+                </AchievementProvider>
+              </GameProvider>
+            </PremiumProvider>
           </AccountCloudSync>
         </AppDialogProvider>
       </body>

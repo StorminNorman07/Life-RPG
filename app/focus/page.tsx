@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 
+import Link from "next/link";
+
 import FocusAudioMixer from "@/components/focus/FocusAudioMixer";
 
 import {
@@ -14,6 +16,10 @@ import {
   type SceneId,
   useFocusTimer,
 } from "@/context/FocusTimerContext";
+
+import {
+  usePremium,
+} from "@/context/PremiumContext";
 
 
 type Mode = {
@@ -168,6 +174,7 @@ const dots =
   );
 
 export default function FocusPage() {
+  const { isPremium } = usePremium();
   const {
     modeId,
     setModeId,
@@ -381,9 +388,11 @@ export default function FocusPage() {
                 "
               >
                 <SceneStage
+                  key={isPremium ? "premium-scenes" : "free-scene"}
                   sceneId={
                     sceneId
                   }
+                  premium={isPremium}
                 >
                   <div
                     className="
@@ -812,9 +821,21 @@ export default function FocusPage() {
                 "
               >
                 <Panel
-                  title="Environment"
-                  description="Choose your animated visual space."
+                  title={isPremium ? "Environment" : "Premium environments"}
+                  description={isPremium ? "Choose your animated visual space." : "Your focus timer is free. Animated backgrounds are part of Premium."}
                 >
+                  {!isPremium ? (
+                    <div className="rounded-xl border border-amber-100/10 bg-gradient-to-br from-amber-200/[.08] to-violet-300/[.05] p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🌌</span>
+                        <div>
+                          <p className="font-black">Focus scenes are Premium</p>
+                          <p className="mt-1 text-xs leading-relaxed text-zinc-500">Pomodoro modes, custom focus and break lengths, and music stay free.</p>
+                        </div>
+                      </div>
+                      <Link href="/shop" className="mt-4 inline-flex rounded-lg border border-amber-100/15 bg-amber-100/[.08] px-3 py-2 text-xs font-black text-amber-100 transition hover:bg-amber-100/[.14]">See Premium plans →</Link>
+                    </div>
+                  ) : (
                   <div
                     className="
                       grid
@@ -894,6 +915,7 @@ export default function FocusPage() {
                       )
                     )}
                   </div>
+                  )}
                 </Panel>
               </div>
 
@@ -1035,10 +1057,14 @@ export default function FocusPage() {
 
 function SceneStage({
   sceneId,
+  premium,
   children,
 }: {
   sceneId:
     SceneId;
+
+  premium:
+    boolean;
 
   children:
     React.ReactNode;
@@ -1064,6 +1090,11 @@ function SceneStage({
 
 
   useEffect(() => {
+    if (!premium) {
+      lastSceneRef.current = sceneId;
+      return;
+    }
+
     if (
       lastSceneRef.current ===
       sceneId
@@ -1125,7 +1156,17 @@ function SceneStage({
     };
   }, [
     sceneId,
+    premium,
   ]);
+
+
+  if (!premium) {
+    return (
+      <div className="relative min-h-[470px] overflow-hidden bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,.11),transparent_55%),linear-gradient(135deg,#111817,#090c0d_70%)] sm:min-h-[620px]">
+        {children}
+      </div>
+    );
+  }
 
 
   return (

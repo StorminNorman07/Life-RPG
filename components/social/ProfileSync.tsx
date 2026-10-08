@@ -18,6 +18,10 @@ import {
 } from "@/context/CharacterContext";
 
 import {
+  usePremium,
+} from "@/context/PremiumContext";
+
+import {
   createClient,
 } from "@/utils/supabase/client";
 
@@ -43,15 +47,29 @@ export default function ProfileSync() {
   } =
     useCharacter();
 
+  const {
+    isPremium,
+    isLifetime,
+    premiumUntil,
+    loading: premiumLoading,
+  } = usePremium();
+
   const lastPayloadRef =
     useRef("");
 
 
   useEffect(() => {
+    if (premiumLoading) {
+      return;
+    }
+
     const payload = {
       avatar_data: {
         identity,
         loadout,
+        isPremium,
+        premiumLifetime: isLifetime,
+        premiumUntil,
       },
 
       equipped_title:
@@ -145,6 +163,10 @@ export default function ProfileSync() {
     identity,
     loadout,
     currentLevel,
+    isPremium,
+    isLifetime,
+    premiumUntil,
+    premiumLoading,
     selectedTitle,
     completedTasks.length,
     completedSkills.length,

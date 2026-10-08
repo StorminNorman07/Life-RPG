@@ -34,7 +34,26 @@ type AvatarData = {
 
   loadout?:
     Partial<CharacterLoadout>;
+
+  isPremium?:
+    boolean;
+
+  premiumLifetime?:
+    boolean;
+
+  premiumUntil?:
+    string | null;
 };
+
+
+function isPremiumMember(avatarData?: AvatarData) {
+  return Boolean(
+    avatarData?.isPremium &&
+      (avatarData.premiumLifetime ||
+        !avatarData.premiumUntil ||
+        Date.parse(avatarData.premiumUntil) > Date.now())
+  );
+}
 
 
 type FriendProfile = {
@@ -486,25 +505,24 @@ export default function FriendProfileClient() {
                 py-5
               "
             >
-              <CharacterDisplay
-                snapshot={
-                  toSnapshot(
-                    profile
-                  )
-                }
-                scale={
-                  0.82
-                }
-                showName={
-                  false
-                }
-                showTitle={
-                  false
-                }
-                showLevel={
-                  false
-                }
-              />
+              {isPremiumMember(profile.avatar_data) ? (
+                <CharacterDisplay
+                  snapshot={toSnapshot(profile)}
+                  scale={0.82}
+                  showName={false}
+                  showTitle={false}
+                  showLevel={false}
+                />
+              ) : (
+                <div className="flex w-full flex-col items-center justify-center px-6 py-12 text-center">
+                  <div className="flex h-32 w-32 items-center justify-center rounded-[2rem] border border-emerald-200/15 bg-[radial-gradient(circle_at_top,rgba(110,231,183,.18),rgba(16,24,24,.72))] text-6xl shadow-[0_24px_70px_rgba(0,0,0,.35)]">
+                    📊
+                  </div>
+                  <p className="mt-6 text-xs font-black uppercase tracking-[.2em] text-emerald-100/60">Player stats</p>
+                  <p className="mt-2 text-3xl font-black">Level {profile.level}</p>
+                  <p className="mt-2 max-w-xs text-sm text-zinc-500">Their progress is built from the daily habits and skill paths they choose.</p>
+                </div>
+              )}
             </div>
 
 
@@ -513,17 +531,16 @@ export default function FriendProfileClient() {
                 min-w-0
               "
             >
-              <p
-                className="
-                  text-sm
-                  font-black
-                  uppercase
-                  tracking-[0.2em]
-                  text-zinc-500
-                "
-              >
-                @{profile.username}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">
+                  @{profile.username}
+                </p>
+                {isPremiumMember(profile.avatar_data) && (
+                  <span className="rounded-full border border-amber-200/20 bg-amber-200/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-100">
+                    ✦ Premium member
+                  </span>
+                )}
+              </div>
 
               <h1
                 className="

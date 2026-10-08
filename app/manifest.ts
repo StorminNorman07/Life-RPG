@@ -13,7 +13,7 @@ export default function manifest():
       "Life RPG",
 
     description:
-      "Build your character by building your life.",
+      "Build better habits, grow your stats, and bring your progress to life.",
 
     start_url:
       "/",

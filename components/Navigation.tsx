@@ -20,9 +20,9 @@ type NavigationItem = {
 const navigationItems: NavigationItem[] = [
   {
     href: "/",
-    label: "Character",
-    shortLabel: "Character",
-    icon: "🧍",
+    label: "Stats",
+    shortLabel: "Stats",
+    icon: "📊",
   },
   {
     href: "/daily-tasks",
@@ -55,12 +55,6 @@ const navigationItems: NavigationItem[] = [
     icon: "💰",
   },
   {
-    href: "/attributes",
-    label: "Attributes",
-    shortLabel: "Stats",
-    icon: "📊",
-  },
-  {
     href: "/achievements",
     label: "Achievements",
     shortLabel: "Awards",
@@ -71,6 +65,12 @@ const navigationItems: NavigationItem[] = [
     label: "Focus",
     shortLabel: "Focus",
     icon: "🎯",
+  },
+  {
+    href: "/shop",
+    label: "Item Shop",
+    shortLabel: "Shop",
+    icon: "🛍️",
   },
 ];
 
@@ -153,7 +153,6 @@ export default function Navigation() {
 
   useEffect(() => {
     if (hideNavigation) {
-      setLoadingAccount(false);
       return;
     }
 
@@ -264,10 +263,18 @@ export default function Navigation() {
 
     if (cached) {
       try {
-        setAccount(
-          JSON.parse(cached) as AccountSummary
-        );
-        setLoadingAccount(false);
+        const cachedAccount = JSON.parse(
+          cached
+        ) as AccountSummary;
+
+        window.setTimeout(() => {
+          if (cancelled) {
+            return;
+          }
+
+          setAccount(cachedAccount);
+          setLoadingAccount(false);
+        }, 0);
       } catch {
         // A malformed cache should not block
         // the fresh profile request below.

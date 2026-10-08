@@ -4,6 +4,9 @@ import type {
   ReactNode,
 } from "react";
 
+import Link from "next/link";
+import { useEffect } from "react";
+
 import {
   environmentAudioOptions,
   focusAudioOptions,
@@ -15,6 +18,8 @@ import type {
   SceneId,
 } from "@/context/FocusTimerContext";
 
+import { usePremium } from "@/context/PremiumContext";
+
 
 export default function FocusAudioMixer({
   sceneId,
@@ -22,6 +27,8 @@ export default function FocusAudioMixer({
   sceneId: SceneId;
 }) {
   void sceneId;
+
+  const { isPremium, loading: premiumLoading } = usePremium();
 
   const {
     environmentAudioId,
@@ -52,6 +59,20 @@ export default function FocusAudioMixer({
     toggleCurrentSongLike,
     seekFocus,
   } = useFocusAudio();
+
+  useEffect(() => {
+    if (!premiumLoading && !isPremium && environmentAudioId !== "none") {
+      setEnvironmentAudioId("none");
+      if (environmentPlaying) toggleEnvironmentPlayback();
+    }
+  }, [
+    isPremium,
+    premiumLoading,
+    environmentAudioId,
+    environmentPlaying,
+    setEnvironmentAudioId,
+    toggleEnvironmentPlayback,
+  ]);
 
 
   const playlistMode =
@@ -103,34 +124,30 @@ export default function FocusAudioMixer({
             space-y-5
           "
         >
-          <AudioLayerControl
-            label="Environment Audio"
-            value={
-              environmentAudioId
-            }
-            options={
-              environmentAudioOptions
-            }
-            volume={
-              environmentVolume
-            }
-            playing={
-              environmentPlaying
-            }
-            disabled={
-              environmentAudioId ===
-              "none"
-            }
-            onValueChange={
-              setEnvironmentAudioId
-            }
-            onVolumeChange={
-              setEnvironmentVolume
-            }
-            onTogglePlayback={
-              toggleEnvironmentPlayback
-            }
-          />
+          {isPremium ? (
+            <AudioLayerControl
+              label="Environment Audio"
+              value={environmentAudioId}
+              options={environmentAudioOptions}
+              volume={environmentVolume}
+              playing={environmentPlaying}
+              disabled={environmentAudioId === "none"}
+              onValueChange={setEnvironmentAudioId}
+              onVolumeChange={setEnvironmentVolume}
+              onTogglePlayback={toggleEnvironmentPlayback}
+            />
+          ) : (
+            <div className="rounded-xl border border-amber-100/10 bg-gradient-to-r from-amber-200/[.07] to-transparent p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">🔒</span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-black">Ambient sounds are Premium</p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">Unlock rain, ocean, forest, fireplace, city, and river sounds. Your music player remains free.</p>
+                  <Link href="/shop" className="mt-3 inline-flex text-xs font-black text-amber-100 transition hover:text-amber-50">Explore Premium →</Link>
+                </div>
+              </div>
+            </div>
+          )}
 
           <AudioLayerControl
             label="Focus Audio"

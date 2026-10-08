@@ -31,7 +31,26 @@ type AvatarData = {
 
   loadout?:
     Partial<CharacterLoadout>;
+
+  isPremium?:
+    boolean;
+
+  premiumLifetime?:
+    boolean;
+
+  premiumUntil?:
+    string | null;
 };
+
+
+function isPremiumMember(avatarData?: AvatarData) {
+  return Boolean(
+    avatarData?.isPremium &&
+      (avatarData.premiumLifetime ||
+        !avatarData.premiumUntil ||
+        Date.parse(avatarData.premiumUntil) > Date.now())
+  );
+}
 
 
 type SearchProfile = {
@@ -278,7 +297,11 @@ export default function FriendsClient() {
 
 
   useEffect(() => {
-    void refreshSocialData();
+    const refreshTimer = window.setTimeout(() => {
+      void refreshSocialData();
+    }, 0);
+
+    return () => window.clearTimeout(refreshTimer);
   }, [
     refreshSocialData,
   ]);
@@ -715,14 +738,16 @@ export default function FriendsClient() {
                         flex-1
                       "
                     >
-                      <p
-                        className="
-                          truncate
-                          font-black
-                        "
-                      >
-                        {profile.display_name}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-black">
+                          {profile.display_name}
+                        </p>
+                        {isPremiumMember(profile.avatar_data) && (
+                          <span className="rounded-full border border-amber-200/20 bg-amber-200/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-100">
+                            ✦ Premium
+                          </span>
+                        )}
+                      </div>
 
                       <p
                         className="
