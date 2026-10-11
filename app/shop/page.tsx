@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 
+import { getCosmeticById } from "@/data/characterOptions";
+import { coinPacks, shopCosmetics } from "@/data/shopCatalog";
 import { usePremium } from "@/context/PremiumContext";
 
 const plans = [
@@ -64,6 +66,7 @@ export default function ShopPage() {
     trialEndsAt,
     source,
     loading,
+    canManageBilling,
     error: statusError,
     redeemCode,
     refresh,
@@ -73,11 +76,112 @@ export default function ShopPage() {
   const [codeError, setCodeError] = useState("");
   const [redeeming, setRedeeming] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [walletLevel, setWalletLevel] = useState(1);
+  const [ownedCosmeticIds, setOwnedCosmeticIds] = useState<string[]>([]);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [walletError, setWalletError] = useState("");
+  const [shopFeedback, setShopFeedback] = useState("");
+  const [shopError, setShopError] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState("");
+  const [billingPortalLoading, setBillingPortalLoading] = useState(false);
+  const [purchasingCosmetic, setPurchasingCosmetic] = useState("");
+
+  const refreshWallet = useCallback(async () => {
+    setWalletLoading(true);
+    setWalletError("");
+    try {
+      const response = await fetch("/api/shop/wallet", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Your coin balance could not be loaded.");
+      setCoinBalance(Number(payload.coinBalance) || 0);
+      setWalletLevel(Number(payload.level) || 1);
+      setOwnedCosmeticIds(Array.isArray(payload.ownedCosmeticIds) ? payload.ownedCosmeticIds : []);
+      window.dispatchEvent(new Event("shop-inventory-updated"));
+    } catch (cause) {
+      setWalletError(cause instanceof Error ? cause.message : "Your coin balance could not be loaded.");
+    } finally {
+      setWalletLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    void refreshWallet();
+  }, [refreshWallet]);
+
+  useEffect(() => {
+    const purchaseStatus = new URLSearchParams(window.location.search).get("purchase");
+    if (purchaseStatus === "success") {
+      setShopFeedback("Checkout complete. Your purchase is being confirmed; refresh your coin balance in a moment.");
+    } else if (purchaseStatus === "cancelled") {
+      setShopFeedback("Checkout was canceled. Nothing was charged.");
+    }
+  }, []);
+
+  async function startCheckout(productKey: string) {
+    setShopError("");
+    setShopFeedback("");
+    setCheckoutLoading(productKey);
+    try {
+      const response = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productKey }),
+      });
+      const payload = await response.json();
+      if (!response.ok || typeof payload.url !== "string") {
+        throw new Error(payload.error ?? "Checkout could not be opened.");
+      }
+      window.location.assign(payload.url);
+    } catch (cause) {
+      setShopError(cause instanceof Error ? cause.message : "Checkout could not be opened.");
+      setCheckoutLoading("");
+    }
+  }
+
+  async function openBillingPortal() {
+    setShopError("");
+    setBillingPortalLoading(true);
+    try {
+      const response = await fetch("/api/billing/portal", { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok || typeof payload.url !== "string") {
+        throw new Error(payload.error ?? "Billing management could not be opened.");
+      }
+      window.location.assign(payload.url);
+    } catch (cause) {
+      setShopError(cause instanceof Error ? cause.message : "Billing management could not be opened.");
+      setBillingPortalLoading(false);
+    }
+  }
+
+  async function purchaseCosmetic(cosmeticId: string) {
+    setShopError("");
+    setShopFeedback("");
+    setPurchasingCosmetic(cosmeticId);
+    try {
+      const response = await fetch("/api/shop/cosmetics/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cosmeticId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "That item could not be purchased.");
+      setCoinBalance(Number(payload.coinBalance) || 0);
+      setOwnedCosmeticIds((current) => current.includes(cosmeticId) ? current : [...current, cosmeticId]);
+      setShopFeedback("Item unlocked. It is now available in your character customizer.");
+      window.dispatchEvent(new Event("shop-inventory-updated"));
+    } catch (cause) {
+      setShopError(cause instanceof Error ? cause.message : "That item could not be purchased.");
+    } finally {
+      setPurchasingCosmetic("");
+    }
+  }
 
   async function handleRedeem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,14 +237,20 @@ export default function ShopPage() {
                 </>
               )}
               <Link href="/" className="mt-4 inline-flex text-xs font-black text-emerald-200 hover:text-emerald-100">Back to your stats →</Link>
+              {canManageBilling && (
+                <button type="button" onClick={() => void openBillingPortal()} disabled={billingPortalLoading} className="mt-3 block text-left text-xs font-black text-amber-100/80 underline decoration-amber-100/20 underline-offset-2 hover:text-amber-50 disabled:opacity-50">
+                  {billingPortalLoading ? "Opening billing…" : "Manage billing"}
+                </button>
+              )}
             </div>
           </div>
         </section>
 
-        {(statusError || message || codeError) && (
-          <div className={`mt-4 rounded-xl border p-4 text-sm ${codeError || statusError ? "border-rose-300/15 bg-rose-300/[.06] text-rose-100" : "border-emerald-300/15 bg-emerald-300/[.06] text-emerald-100"}`}>
-            {codeError || message || (statusError ? "Membership status could not be loaded. The shop database setup needs to be applied before Premium can be activated." : "")}
+        {(statusError || message || codeError || shopFeedback || shopError) && (
+          <div className={`mt-4 rounded-xl border p-4 text-sm ${shopError || codeError || statusError ? "border-rose-300/15 bg-rose-300/[.06] text-rose-100" : "border-emerald-300/15 bg-emerald-300/[.06] text-emerald-100"}`}>
+            {shopError || codeError || statusError || shopFeedback || message || ""}
             {statusError && <button type="button" onClick={() => void refresh()} className="ml-3 font-black underline underline-offset-2">Try again</button>}
+            {walletError && <button type="button" onClick={() => void refreshWallet()} className="ml-3 font-black underline underline-offset-2">Refresh coins</button>}
           </div>
         )}
 
@@ -189,11 +299,106 @@ export default function ShopPage() {
                 <p className="mt-4 text-sm font-black text-zinc-400">{plan.name}</p>
                 <p className="mt-1 text-4xl font-black">{plan.price}<span className="ml-1 text-sm font-bold text-zinc-500">{plan.cadence}</span></p>
                 <p className="mt-2 min-h-5 text-xs text-zinc-500">{plan.note}</p>
-                <button type="button" disabled className="mt-5 w-full cursor-not-allowed rounded-xl border border-white/10 bg-white/[.05] px-4 py-3 text-sm font-black text-zinc-500" title="Checkout will be enabled when a payment provider is connected">Checkout coming soon</button>
+                <button
+                  type="button"
+                  disabled={Boolean(checkoutLoading)}
+                  onClick={() => void startCheckout(plan.id === "monthly" ? "premium_monthly" : plan.id === "annual" ? "premium_yearly" : "premium_lifetime")}
+                  className="mt-5 w-full rounded-xl bg-amber-100 px-4 py-3 text-sm font-black text-[#211808] transition hover:bg-yellow-50 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {checkoutLoading === `premium_${plan.id === "annual" ? "yearly" : plan.id}` ? "Opening checkout…" : "Continue to secure checkout"}
+                </button>
               </article>
             ))}
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-zinc-600">Plan prices are configured here. Checkout is not connected yet, so no purchase will be submitted or charged.</p>
+          <p className="mt-3 text-xs leading-relaxed text-zinc-600">Monthly and yearly plans renew through Stripe; checkout starts billing immediately. Lifetime is a one-time purchase. Your seven-day trial is separate and does not require a payment method.</p>
+        </section>
+
+        <section className="mt-9 rounded-3xl border border-amber-100/10 bg-[radial-gradient(ellipse_at_top_right,rgba(251,191,36,.08),transparent_48%),#111417] p-5 sm:p-7">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.2em] text-amber-100/70">Coins & character items</p>
+              <h2 className="mt-2 text-2xl font-black sm:text-3xl">Build your look with your progress</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">Reach cosmetic milestones to earn coins, then use them to unlock featured looks early. Every newly unlocked cosmetic also grants coins, with extra coins at tier milestones. Character items can be equipped while Premium is active.</p>
+            </div>
+            <div className="rounded-2xl border border-amber-100/15 bg-black/30 px-5 py-3 text-right">
+              <p className="text-[10px] font-black uppercase tracking-[.18em] text-zinc-500">Your balance</p>
+              <p className="mt-1 text-2xl font-black text-amber-100">{walletLoading ? "…" : `◈ ${coinBalance.toLocaleString()}`}</p>
+              <button type="button" onClick={() => void refreshWallet()} disabled={walletLoading} className="mt-1 text-[10px] font-black uppercase tracking-wider text-zinc-500 underline decoration-white/20 underline-offset-2 hover:text-zinc-300 disabled:opacity-50">Refresh balance</button>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[.18em] text-zinc-600">Coin bundles</p>
+                <h3 className="mt-1 text-xl font-black">Optional top-ups</h3>
+              </div>
+              <p className="text-xs text-zinc-600">One-time purchases · USD</p>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              {coinPacks.map((pack) => (
+                <article key={pack.id} className="rounded-2xl border border-white/[.08] bg-black/20 p-4">
+                  <p className="text-2xl font-black text-amber-100">◈ {pack.coins.toLocaleString()}</p>
+                  <p className="mt-1 text-sm font-bold text-zinc-400">{pack.price} one time</p>
+                  <button
+                    type="button"
+                    disabled={Boolean(checkoutLoading)}
+                    onClick={() => void startCheckout(pack.id)}
+                    className="mt-4 w-full rounded-xl border border-amber-100/15 bg-amber-100/[.08] px-4 py-2.5 text-sm font-black text-amber-50 transition hover:bg-amber-100/[.14] disabled:cursor-wait disabled:opacity-50"
+                  >
+                    {checkoutLoading === pack.id ? "Opening checkout…" : "Buy coin bundle"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[.18em] text-zinc-600">Featured cosmetics</p>
+                <h3 className="mt-1 text-xl font-black">Unlock a look early</h3>
+              </div>
+              <p className="text-xs text-zinc-600">Level {walletLevel} · {shopCosmetics.length} featured items</p>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {shopCosmetics.map((shopItem) => {
+                const item = getCosmeticById(shopItem.id);
+                if (!item) return null;
+                const owned = ownedCosmeticIds.includes(item.id);
+                const levelUnlocked = walletLevel >= item.requiredLevel;
+                const canAfford = coinBalance >= shopItem.coinCost;
+                return (
+                  <article key={item.id} className="flex min-h-52 flex-col rounded-2xl border border-white/[.08] bg-black/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-2xl">{item.icon}</span>
+                      <span className="rounded-full border border-amber-100/10 bg-amber-100/[.06] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-100/75">{item.tier}</span>
+                    </div>
+                    <p className="mt-4 font-black">{item.name}</p>
+                    <p className="mt-1 flex-1 text-xs leading-relaxed text-zinc-500">{item.description}</p>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <span className="text-sm font-black text-amber-100">◈ {shopItem.coinCost}</span>
+                      {owned ? (
+                        <span className="text-xs font-black text-emerald-200">Owned</span>
+                      ) : levelUnlocked ? (
+                        <span className="text-right text-[10px] font-bold text-zinc-500">Unlocked at level {item.requiredLevel}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={walletLoading || !canAfford || Boolean(purchasingCosmetic)}
+                          onClick={() => void purchaseCosmetic(item.id)}
+                          className="rounded-lg bg-amber-100 px-3 py-2 text-xs font-black text-[#211808] transition hover:bg-yellow-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {purchasingCosmetic === item.id ? "Unlocking…" : canAfford ? "Unlock item" : "Earn more coins"}
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+          {walletError && <p className="mt-4 text-sm text-rose-200">{walletError}</p>}
         </section>
 
         <section className="mt-9 grid gap-4 lg:grid-cols-[1fr_.85fr]">

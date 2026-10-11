@@ -17,6 +17,7 @@ export type PremiumStatus = {
   trialStartedAt: string | null;
   trialEndsAt: string | null;
   source: string | null;
+  canManageBilling: boolean;
 };
 
 type PremiumContextValue = PremiumStatus & {
@@ -33,6 +34,7 @@ const emptyStatus: PremiumStatus = {
   trialStartedAt: null,
   trialEndsAt: null,
   source: null,
+  canManageBilling: false,
 };
 
 const PremiumContext = createContext<PremiumContextValue | null>(null);
@@ -64,6 +66,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         trialStartedAt: payload.trialStartedAt ?? null,
         trialEndsAt: payload.trialEndsAt ?? null,
         source: payload.source ?? null,
+        canManageBilling: Boolean(payload.canManageBilling),
       });
     } catch (cause) {
       setError(
@@ -90,14 +93,15 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       throw new Error(payload.error ?? "That code could not be redeemed.");
     }
 
-    setStatus({
+    setStatus((current) => ({
       isPremium: Boolean(payload.isPremium),
       isLifetime: Boolean(payload.isLifetime),
       premiumUntil: payload.premiumUntil ?? null,
       trialStartedAt: payload.trialStartedAt ?? null,
       trialEndsAt: payload.trialEndsAt ?? null,
       source: payload.source ?? null,
-    });
+      canManageBilling: current.canManageBilling,
+    }));
   }, []);
 
   useEffect(() => {

@@ -57,6 +57,9 @@ export default function ProfileSync() {
   const lastPayloadRef =
     useRef("");
 
+  const lastSyncedLevelRef =
+    useRef<number | null>(null);
+
 
   useEffect(() => {
     if (premiumLoading) {
@@ -151,6 +154,32 @@ export default function ProfileSync() {
 
           lastPayloadRef.current =
             serialized;
+
+          if (
+            lastSyncedLevelRef.current !==
+            currentLevel
+          ) {
+            const { error: coinRewardError } =
+              await supabase.rpc(
+                "claim_shop_progression_rewards"
+              );
+
+            if (coinRewardError) {
+              console.error(
+                "Progression coin rewards could not be claimed:",
+                coinRewardError.message
+              );
+            } else {
+              lastSyncedLevelRef.current =
+                currentLevel;
+
+              window.dispatchEvent(
+                new Event(
+                  "shop-inventory-updated"
+                )
+              );
+            }
+          }
         },
         700
       );

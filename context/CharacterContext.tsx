@@ -3,6 +3,7 @@
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -431,6 +432,86 @@ export function CharacterProvider({
     useState(false);
 
 
+  const [
+    ownedCosmeticIds,
+    setOwnedCosmeticIds,
+  ] =
+    useState<string[]>([]);
+
+
+  const [
+    shopInventoryLoaded,
+    setShopInventoryLoaded,
+  ] =
+    useState(false);
+
+
+  const refreshShopInventory =
+    useCallback(async () => {
+      try {
+        const response =
+          await fetch(
+            "/api/shop/wallet",
+            {
+              cache: "no-store",
+            }
+          );
+
+
+        if (!response.ok) {
+          setOwnedCosmeticIds([]);
+          return;
+        }
+
+
+        const payload =
+          await response.json();
+
+
+        setOwnedCosmeticIds(
+          Array.isArray(
+            payload.ownedCosmeticIds
+          )
+            ? payload.ownedCosmeticIds.filter(
+                (itemId: unknown): itemId is string =>
+                  typeof itemId === "string"
+              )
+            : []
+        );
+      } catch {
+        setOwnedCosmeticIds([]);
+      } finally {
+        setShopInventoryLoaded(true);
+      }
+    }, []);
+
+
+  useEffect(() => {
+    void refreshShopInventory();
+
+
+    const handleInventoryUpdate = () => {
+      void refreshShopInventory();
+    };
+
+
+    window.addEventListener(
+      "shop-inventory-updated",
+      handleInventoryUpdate
+    );
+
+
+    return () => {
+      window.removeEventListener(
+        "shop-inventory-updated",
+        handleInventoryUpdate
+      );
+    };
+  }, [
+    refreshShopInventory,
+  ]);
+
+
   const currentLevel =
     getLevel(
       player.totalXP
@@ -495,9 +576,24 @@ export function CharacterProvider({
         );
 
 
+      const purchasedCosmetics =
+        ownedCosmeticIds
+          .map(
+            (itemId) =>
+              getCharacterCosmeticById(
+                itemId
+              )
+          )
+          .filter(
+            (item): item is CosmeticItem =>
+              Boolean(item)
+          );
+
+
       return [
         ...progressionCosmetics,
         ...currentMonthSeasonalCosmetics,
+        ...purchasedCosmetics,
       ].filter(
         (
           item:
@@ -521,6 +617,7 @@ export function CharacterProvider({
       currentLevel,
       currentSeasonalMonth,
       seasonalCosmetics,
+      ownedCosmeticIds,
     ]);
 
 
@@ -579,6 +676,11 @@ export function CharacterProvider({
     }
 
 
+    if (!shopInventoryLoaded) {
+      return;
+    }
+
+
     const saved:
       SavedCharacterData = {
       identity,
@@ -597,6 +699,7 @@ export function CharacterProvider({
     identity,
     loadout,
     hasLoaded,
+    shopInventoryLoaded,
   ]);
 
 
@@ -645,6 +748,11 @@ export function CharacterProvider({
 
   useEffect(() => {
     if (!hasLoaded) {
+      return;
+    }
+
+
+    if (!shopInventoryLoaded) {
       return;
     }
 
@@ -725,6 +833,7 @@ export function CharacterProvider({
     );
   }, [
     hasLoaded,
+    shopInventoryLoaded,
     unlockedCosmeticIds,
   ]);
 
@@ -800,7 +909,7 @@ export function CharacterProvider({
 
     return unlockedCosmeticIds.has(
       itemId
-    );
+    ) || ownedCosmeticIds.includes(itemId);
   }
 
 

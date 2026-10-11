@@ -28,7 +28,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("premium_entitlements")
-    .select("trial_started_at, trial_expires_at, premium_until, premium_lifetime, premium_source")
+    .select("trial_started_at, trial_expires_at, premium_until, premium_lifetime, premium_source, stripe_subscription_until, stripe_customer_id")
     .eq("user_id", user.id)
     .single();
 
@@ -38,7 +38,16 @@ export async function GET() {
   }
 
   const isLifetime = Boolean(data.premium_lifetime);
-  const premiumUntil = data.premium_until as string | null;
+  const entitlementDates = [
+    data.premium_until as string | null,
+    data.stripe_subscription_until as string | null,
+  ].filter((date): date is string => Boolean(date));
+  const premiumUntil = entitlementDates
+    .sort((left, right) => Date.parse(right) - Date.parse(left))[0] ?? null;
+  const subscriptionActive = Boolean(
+    data.stripe_subscription_until &&
+    Date.parse(data.stripe_subscription_until) > Date.now()
+  );
 
   return NextResponse.json({
     isPremium: isLifetime || Boolean(premiumUntil && Date.parse(premiumUntil) > Date.now()),
@@ -46,6 +55,7 @@ export async function GET() {
     premiumUntil,
     trialStartedAt: data.trial_started_at,
     trialEndsAt: data.trial_expires_at,
-    source: data.premium_source,
+    source: subscriptionActive ? "stripe" : data.premium_source,
+    canManageBilling: Boolean(data.stripe_customer_id),
   });
 }
