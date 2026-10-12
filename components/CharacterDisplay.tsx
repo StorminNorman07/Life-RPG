@@ -455,6 +455,17 @@ export default function CharacterDisplay({
     );
 
 
+  const isLayeredLook =
+    [
+      frame,
+      accessory,
+      aura,
+      heldItem,
+      sceneEffect,
+    ].filter(Boolean).length >=
+    2;
+
+
   const sceneWidth =
     420;
 
@@ -521,7 +532,10 @@ export default function CharacterDisplay({
 
             overflow-hidden
             rounded-[2.5rem]
-            bg-black
+            border
+            border-white/10
+            bg-[#0a0b12]
+            shadow-[0_26px_80px_rgba(0,0,0,.48),inset_0_1px_0_rgba(255,255,255,.08)]
 
             origin-top-left
           "
@@ -550,9 +564,31 @@ export default function CharacterDisplay({
           />
 
 
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              inset-0
+              z-[5]
+
+              rounded-[2.5rem]
+            "
+            style={{
+              background:
+                  isLayeredLook
+                    ? "radial-gradient(ellipse at 50% 47%, rgba(255,255,255,.10) 0%, rgba(2,6,23,.12) 35%, rgba(2,6,23,.66) 100%)"
+                  : "radial-gradient(ellipse at 50% 47%, rgba(255,255,255,.07) 0%, rgba(2,6,23,.02) 36%, rgba(2,6,23,.3) 100%)",
+            }}
+          />
+
+
           <AuraLayer
             item={
               aura
+            }
+            isLayered={
+              isLayeredLook
             }
           />
 
@@ -560,18 +596,60 @@ export default function CharacterDisplay({
           <div
             className="
               absolute
-              bottom-[58px]
+              bottom-[52px]
               left-1/2
               z-10
 
-              h-9
-              w-48
+              h-12
+              w-52
 
               -translate-x-1/2
 
               rounded-full
-              bg-black/55
-              blur-lg
+              bg-[radial-gradient(ellipse,rgba(3,5,12,.72)_0%,rgba(3,5,12,.34)_55%,transparent_78%)]
+              blur-[2px]
+            "
+          />
+
+
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              bottom-[67px]
+              left-1/2
+              z-[11]
+
+              h-5
+              w-40
+              -translate-x-1/2
+              rounded-[50%]
+              border
+              border-white/15
+              bg-gradient-to-b
+              from-white/[0.11]
+              to-slate-950/60
+              shadow-[0_10px_22px_rgba(0,0,0,.35)]
+            "
+          />
+
+
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              left-1/2
+              top-[18%]
+              z-[6]
+
+              h-[340px]
+              w-[230px]
+              -translate-x-1/2
+              rounded-[50%]
+              bg-[radial-gradient(ellipse,rgba(255,255,255,.10)_0%,rgba(255,255,255,.035)_42%,transparent_72%)]
+              blur-2xl
             "
           />
 
@@ -621,6 +699,9 @@ export default function CharacterDisplay({
               heldItemHand={
                 effectiveLoadout.heldItemHand
               }
+              isLayered={
+                isLayeredLook
+              }
               pose={
                 pose
               }
@@ -631,6 +712,9 @@ export default function CharacterDisplay({
           <SceneEffectLayer
             item={
               sceneEffect
+            }
+            isLayered={
+              isLayeredLook
             }
           />
 
@@ -682,19 +766,39 @@ export default function CharacterDisplay({
 
 
           {frame && (
-            <>
+            <div
+              className="
+                pointer-events-none
+                absolute
+                inset-0
+                z-[74]
+                transition-all
+                duration-500
+              "
+              style={{
+                opacity:
+                  isLayeredLook
+                    ? 0.46
+                    : 1,
+                transform:
+                  isLayeredLook
+                    ? "scale(.78)"
+                    : "scale(1)",
+                transformOrigin:
+                  "center",
+              }}
+            >
               <div
                 className="
                   pointer-events-none
                   absolute
                   inset-0
-                  z-[74]
 
                   rounded-[2.5rem]
                 "
                 style={{
                   boxShadow:
-                    `inset 0 0 0 8px ${tierColors[frame.tier].dark}`,
+                    `inset 0 0 0 ${isLayeredLook ? 5 : 8}px ${tierColors[frame.tier].dark}`,
                 }}
               />
 
@@ -703,7 +807,7 @@ export default function CharacterDisplay({
                   frame
                 }
               />
-            </>
+            </div>
           )}
 
 
@@ -4917,9 +5021,13 @@ function ParticleField({
 
 function SceneEffectLayer({
   item,
+  isLayered,
 }: {
   item:
     CosmeticItem | null;
+
+  isLayered:
+    boolean;
 }) {
   if (!item) {
     return null;
@@ -4936,11 +5044,20 @@ function SceneEffectLayer({
         pointer-events-none
         absolute
         inset-0
-        z-[35]
+        z-[15]
+
+        transition-opacity
+        duration-500
 
         overflow-hidden
         rounded-[2.5rem]
       "
+      style={{
+        opacity:
+          isLayered
+            ? 0.34
+            : 0.58,
+      }}
     >
       {id ===
         "diamond-blizzard" && (
@@ -5951,9 +6068,13 @@ function SceneEffectLayer({
 
 function AuraLayer({
   item,
+  isLayered,
 }: {
   item:
     CosmeticItem | null;
+
+  isLayered:
+    boolean;
 }) {
   if (!item) {
     return null;
@@ -5978,9 +6099,24 @@ function AuraLayer({
         inset-0
         z-[8]
 
+        transition-all
+        duration-500
+
         overflow-hidden
         rounded-[2.5rem]
       "
+      style={{
+        opacity:
+          isLayered
+            ? 0.46
+            : 1,
+        transform:
+          isLayered
+            ? "scale(.87)"
+            : "scale(1)",
+        transformOrigin:
+          "center",
+      }}
     >
       <div
         className="
@@ -7419,6 +7555,7 @@ function CharacterFigure({
   accessory,
   heldItem,
   heldItemHand,
+  isLayered,
   pose,
 }: {
   gender:
@@ -7451,6 +7588,9 @@ function CharacterFigure({
   heldItemHand:
     HeldItemHand;
 
+  isLayered:
+    boolean;
+
   pose:
     CosmeticItem | null;
 }) {
@@ -7460,16 +7600,24 @@ function CharacterFigure({
     );
 
 
+  const poseAnimationClass =
+    getPoseAnimationClass(
+      pose?.visualId
+    );
+
+
   return (
     <svg
-      width="270"
-      height="365"
+      width="286"
+      height="387"
       viewBox="0 0 270 365"
-      className="
+      className={`
         overflow-visible
 
         drop-shadow-[0_18px_18px_rgba(0,0,0,.65)]
-      "
+
+        ${poseAnimationClass ? "" : "character-idle-breathe"}
+      `}
     >
       <PoseEquipment
         visualId={
@@ -7480,9 +7628,7 @@ function CharacterFigure({
 
       <g
         className={
-          getPoseAnimationClass(
-            pose?.visualId
-          )
+          poseAnimationClass
         }
       >
         <g
@@ -7515,11 +7661,24 @@ function CharacterFigure({
         />
 
 
-        <AccessoryBack
-          item={
-            accessory
+        <g
+          transform={
+            isLayered
+              ? "translate(135 185) scale(.74) translate(-135 -185)"
+              : undefined
           }
-        />
+          opacity={
+            isLayered
+              ? 0.76
+              : 1
+          }
+        >
+          <AccessoryBack
+            item={
+              accessory
+            }
+          />
+        </g>
 
 
         <Legs
@@ -7630,27 +7789,48 @@ function CharacterFigure({
         />
 
 
-        <AccessoryFront
-          item={
-            accessory
+        <g
+          transform={
+            isLayered
+              ? "translate(135 185) scale(.74) translate(-135 -185)"
+              : undefined
           }
-        />
+          opacity={
+            isLayered
+              ? 0.76
+              : 1
+          }
+        >
+          <AccessoryFront
+            item={
+              accessory
+            }
+          />
+        </g>
 
 
-        <HeldItem
-          item={
-            heldItem
+        <g
+          transform={
+            isLayered
+              ? "translate(135 185) scale(.78) translate(-135 -185)"
+              : undefined
           }
-          selectedHand={
-            heldItemHand
-          }
-          pose={
-            poseData
-          }
-          poseVisualId={
-            pose?.visualId
-          }
-        />
+        >
+          <HeldItem
+            item={
+              heldItem
+            }
+            selectedHand={
+              heldItemHand
+            }
+            pose={
+              poseData
+            }
+            poseVisualId={
+              pose?.visualId
+            }
+          />
+        </g>
         </g>
       </g>
     </svg>
@@ -11453,6 +11633,22 @@ function CharacterAnimationStyles() {
   return (
     <style>
       {`
+        @keyframes characterIdleBreathe {
+          0%, 100% {
+            transform: translateY(0) rotate(-.35deg) scaleY(1);
+          }
+
+          50% {
+            transform: translateY(-2px) rotate(.35deg) scaleY(1.006);
+          }
+        }
+
+        .character-idle-breathe {
+          transform-box: fill-box;
+          transform-origin: center bottom;
+          animation: characterIdleBreathe 5.6s ease-in-out infinite;
+        }
+
         @keyframes sceneBlizzardFallNear {
           0% {
             transform: translate3d(-30px,-40px,0) rotate(0deg);
