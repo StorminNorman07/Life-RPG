@@ -33,6 +33,10 @@ export type HairColor =
   | "gray"
   | "white";
 
+export type EyeColor = "brown" | "hazel" | "blue" | "green" | "gray" | "violet";
+export type FaceShape = "soft" | "round" | "square";
+export type BodyShape = "compact" | "balanced" | "broad";
+
 
 export type GlassesStyle =
   | "none"
@@ -107,6 +111,12 @@ export interface CharacterIdentity {
 
   earrings:
     EarringStyle;
+
+  eyeColor: EyeColor;
+
+  faceShape: FaceShape;
+
+  bodyShape: BodyShape;
 }
 
 
@@ -210,6 +220,15 @@ export const defaultIdentity:
 
   earrings:
     "none",
+
+  eyeColor:
+    "brown",
+
+  faceShape:
+    "soft",
+
+  bodyShape:
+    "balanced",
 };
 
 
@@ -762,52 +781,59 @@ const categoryIcons:
     string[]
   > = {
   outfit: [
-    "🥋",
     "🧥",
+    "🪡",
     "🛡️",
   ],
 
   background: [
-    "🌄",
-    "🏙️",
-    "🌈",
+    "🏕️",
+    "🏰",
+    "🌌",
   ],
 
   frame: [
-    "🌿",
-    "🚘",
-    "💎",
+    "🜂",
+    "⛨",
+    "✧",
   ],
 
   accessory: [
     "🎒",
-    "🎧",
+    "🧭",
     "🪽",
   ],
 
   pose: [
-    "🧍",
-    "💪",
+    "⚔️",
+    "🏹",
     "🧘",
   ],
 
   aura: [
-    "⭕",
-    "🪐",
+    "◉",
+    "✧",
     "🔥",
   ],
 
   heldItem: [
-    "📖",
-    "📷",
-    "⚔️",
+    "🗡️",
+    "🪄",
+    "🛡️",
   ],
 
   sceneEffect: [
-    "🌧️",
-    "❄️",
-    "🌸",
+    "✨",
+    "🌠",
+    "⚡",
   ],
+};
+
+const rewardPrefixes: Record<CosmeticTier, [string, string, string]> = {
+  Bronze: ["Trailguard", "Pathfinder", "Ironbound"], Silver: ["Moontrail", "Runesewn", "Frostwatch"],
+  Gold: ["Sunforged", "Gilded", "Lionheart"], Platinum: ["Starfall", "Aetherweave", "Stormcaller"],
+  Diamond: ["Prismguard", "Glacierborne", "Astral"], Master: ["Runebreaker", "Phoenixbound", "Voidwalker"],
+  Legendary: ["Eclipse", "Titanheart", "Realmshaper"],
 };
 
 
@@ -1692,25 +1718,12 @@ function createCosmetic(
     );
 
 
-  const specialName =
-    visualId
-      .split("-")
-      .slice(1)
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1)
-      )
-      .join(" ");
-
-
   return {
     id:
       `${tier.toLowerCase()}-${category}-${itemNumber}`,
 
     name:
-      specialName ||
-      `${tier} ${categoryNames[category]} ${itemNumber}`,
+      `${rewardPrefixes[tier][itemNumber - 1]} ${categoryNames[category]}`,
 
     category,
 
@@ -1726,9 +1739,7 @@ function createCosmetic(
       ],
 
     description:
-      tierDescriptions[
-        tier
-      ],
+      `${tier} hero gear earned on the level 1–100 journey. ${tierDescriptions[tier]}`,
 
     visualId,
 
@@ -1869,7 +1880,7 @@ export const levelRewards:
   Array.from(
     {
       length:
-        99,
+        100,
     },
 
     (
